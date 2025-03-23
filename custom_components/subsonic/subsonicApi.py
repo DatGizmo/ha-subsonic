@@ -234,9 +234,50 @@ class SubsonicApi:
 
         return url
 
+    async def getCoverArt(self, id: str) -> bytes:
+        params = {
+            "id": id
+        }
+        response = await self.__request("GET", "getCoverArt", params)
+        return response.read()
+
+    async def jukeboxStatus(self) -> dict:
+        params = {
+            "action": 'status'
+        }
+        response = await self.__request("GET", "jukeboxControl", params)
+        return getTagAttributes(response, "jukeboxStatus")
+
+    async def jukeboxControl(self, action: str, index: int = 0, offset: str = "", id: str = "", gain: float = 1) -> dict:
+        params = {
+            "action": action,
+            "index": index,
+            "offset": offset,
+            "id": id,
+            "gain": gain
+        }
+        response = await self.__request("POST", "jukeboxControl", params)
+        return getTagAttributes(response, "jukeboxPlaylist")
+
+    async def jukeboxLoadPlaylist(self, sids: list = []) -> None:
+        ids = ""
+        for i in sids:
+            ids += f"&id={i}"
+        params = {
+            "action": "set"
+        }
+        params.add(ids)
+        await self.__request("POST", "jukeboxControl", params)
+
+    async def jukeboxPlaylist(self) -> dict:
+        params = {
+            "action": 'get'
+        }
+        response = await self.__request("GET", "jukeboxControl", params)
+        return getTagsAttributesToList(response, "entry")
 
     async def __aenter__(self) -> Self:
         return self
-    
+
     async def __aexit__(self, *_exc_info: object) -> None:
         await self.close()
