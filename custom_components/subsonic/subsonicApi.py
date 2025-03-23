@@ -21,15 +21,15 @@ class SubsonicApi:
     requestTimeout: float = 8.0
     apiVersion: str = "1.16.1"
     session: aiohttp.client.ClientSession | None = None
-        
+
     @property
     def url(self) -> str:
         return self.__getProperty("url")
-    
+
     @property
     def user(self) -> str:
         return self.__getProperty("user")
-    
+
     @property
     def password(self) -> str:
         return self.__getProperty("password")
@@ -37,14 +37,14 @@ class SubsonicApi:
     @property
     def salt(self) -> str:
         return secrets.token_hex(5)
-    
+
     def __getProperty(self, property, dafultValue=None):
         if self.config is None:
             return dafultValue
 
         if property not in self.config:
             return dafultValue
-        
+
         return self.config[property]
 
     def __generateToken(self, password: str, salt: str) -> str:
@@ -54,9 +54,9 @@ class SubsonicApi:
         if self.session is None:
             self.session = aiohttp.ClientSession()
             self._close_session = True
-        
+
         return self.session
-    
+
     def __getRequestParams(self, params):
         s = self.salt
 
@@ -85,12 +85,12 @@ class SubsonicApi:
 
         try:
             async with asyncio.timeout(self.requestTimeout):
-                response = await s.request(method, 
-                                        url, 
-                                        headers=headers, 
+                response = await s.request(method,
+                                        url,
+                                        headers=headers,
                                         params=p,
                                         raise_for_status=True)
-                
+
                 content_type = response.headers.get("Content-Type", "")
 
                 if "application/json" in content_type:
@@ -98,11 +98,11 @@ class SubsonicApi:
                 else:
                     text = await response.text()
                     return text
-                
+
         except asyncio.TimeoutError as exception:
             LOGGER.error("Timeout error")
             raise Exception("Timeout error") from exception
-        
+
         except (aiohttp.ClientError, socket.gaierror) as exception:
             LOGGER.error("Error connecting to Navidrome")
             raise Exception("Error connecting to Navidrome") from exception
@@ -110,8 +110,8 @@ class SubsonicApi:
     async def close(self) -> None:
         """Close open client session."""
         if self.session and self._close_session:
-            await self.session.close()    
-    
+            await self.session.close()
+
     async def ping(self) -> bool:
         pingResponse = await self.__request("GET", "ping")
 
@@ -120,15 +120,15 @@ class SubsonicApi:
 
         if "status" not in ping:
             return False
-        
+
         return ping["status"] == "ok"
-    
+
     async def getRadioStations(self) -> dict:
         radioResponse = await self.__request("GET", "getInternetRadioStations")
         radios = getTagsAttributesToList(radioResponse, "internetRadioStation")
 
         return radios
-    
+
     async def getAlbums(self) -> list:
         params = {
             "type": "alphabeticalByName"
@@ -137,7 +137,7 @@ class SubsonicApi:
         albums = getTagsAttributesToList(albumsResponse, "album")
 
         return albums
-    
+
     async def getAlbum(self, id: str) -> dict:
         params = {
             "id": id
@@ -155,7 +155,7 @@ class SubsonicApi:
         playlists = getTagsAttributesToList(playlistsResponse, "playlist")
 
         return playlists
-    
+
     async def getPlaylist(self, id: str) -> dict:
         params = {
             "id": id
@@ -172,7 +172,7 @@ class SubsonicApi:
         genresResponse = await self.__request("GET", "getGenres")
         genres = getTagsTexts(genresResponse, "genre")
         return genres
-    
+
     async def getSongsByGenre(self, id: str) -> list:
         params = {
             "genre": id
@@ -181,18 +181,18 @@ class SubsonicApi:
         songs = getTagsAttributesToList(songsResponse, "song")
 
         return songs
-    
+
     async def getArtists(self) -> list:
         artistsResponse = await self.__request("GET", "getArtists")
         artists = getTagsAttributesToList(artistsResponse, "artist")
 
         return artists
-    
+
     async def getArtist(self, id: str) -> dict:
         params = {
             "id": id
         }
-        
+
         artistResponse = await self.__request("GET", "getArtist", params)
         artist = getTagAttributes(artistResponse, "artist")
 

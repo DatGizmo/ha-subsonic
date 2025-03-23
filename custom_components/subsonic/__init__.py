@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     LOGGER.info(f"Subsonic Setup")
 
-    navidrome = SubsonicApi(session=session, 
+    navidrome = SubsonicApi(session=session,
                             userAgent=userAgent,
                             config=entry.data)
 

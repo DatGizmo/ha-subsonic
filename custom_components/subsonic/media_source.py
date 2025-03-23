@@ -29,15 +29,15 @@ class SubsonicSource(MediaSource):
     @property
     def artists(self) -> bool:
         return self.__getOption("artists", True)
-    
+
     @property
     def albums(self) -> bool:
         return self.__getOption("albums", True)
-    
+
     @property
     def playlists(self) -> bool:
         return self.__getOption("playlists", True)
-    
+
     @property
     def favorites(self) -> bool:
         return self.__getOption("favorites", True)
@@ -65,9 +65,9 @@ class SubsonicSource(MediaSource):
 
         if isinstance(dafultValue, Exception):
             raise dafultValue
-        
+
         return dafultValue
-    
+
     def __getOption(self, option, defaultValue=None):
         if (self.entry is not None
             and self.entry.options is not None
@@ -78,7 +78,7 @@ class SubsonicSource(MediaSource):
             raise defaultValue
 
         return defaultValue
-    
+
     def __getTranslation(self, key: str) -> str:
         lang = self.hass.config.language
         return getTranslation(lang, key)
@@ -88,12 +88,12 @@ class SubsonicSource(MediaSource):
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         if item.identifier.startswith("radio/"):
             return await self.async_resolve_radio(item.identifier)
-        
+
         if item.identifier.startswith("song/"):
             return await self.async_resolve_song(item.identifier)
-        
+
         raise Unresolvable("Can't resolve media item")
-    
+
     async def async_resolve_radio(self, identifier: str) -> PlayMedia:
         radioId = identifier.replace("radio/", "")
         radios = await self.api.getRadioStations()
@@ -132,7 +132,7 @@ class SubsonicSource(MediaSource):
 
 
         return await self.async_browse_root()
-    
+
     async def async_browse_root(self) -> BrowseMediaSource:
 
         childrens = []
@@ -231,7 +231,7 @@ class SubsonicSource(MediaSource):
             children_media_class=MediaClass.DIRECTORY,
             children=childrens,
         )
-    
+
     async def async_browser_item(self, identifier: str) -> BrowseMediaSource:
         title = identifier
         childrens = []
@@ -270,7 +270,7 @@ class SubsonicSource(MediaSource):
             children_media_class=children_type,
             children=childrens,
         )
-    
+
     async def async_list_radios(self) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
         radios = await self.api.getRadioStations()
@@ -289,7 +289,7 @@ class SubsonicSource(MediaSource):
             )
 
         return items
-    
+
     async def async_list_albums(self) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
         albums = await self.api.getAlbums()
@@ -316,7 +316,7 @@ class SubsonicSource(MediaSource):
             )
 
         return items
-    
+
     async def async_list_playlists(self) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
         playlists = await self.api.getPlaylists()
@@ -343,7 +343,7 @@ class SubsonicSource(MediaSource):
             )
 
         return items
-    
+
     async def async_list_genres(self) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
         genres = await self.api.getGenres()
@@ -391,7 +391,7 @@ class SubsonicSource(MediaSource):
 
         return items
 
-        
+
 
     async def async_list_songs_album(self, albumId: str) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
@@ -430,7 +430,7 @@ class SubsonicSource(MediaSource):
             children_media_class=MediaClass.MUSIC,
             children=items,
         )
-    
+
     async def async_list_songs_playlist(self, playlistId: str) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
 
@@ -468,7 +468,7 @@ class SubsonicSource(MediaSource):
             children_media_class=MediaClass.MUSIC,
             children=items,
         )
-    
+
     async def async_list_songs_genre(self, genreId: str) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
 
@@ -506,7 +506,7 @@ class SubsonicSource(MediaSource):
             children_media_class=MediaClass.MUSIC,
             children=items,
         )
-        
+
     async def async_list_albums_artist(self, artistId: str) -> list[BrowseMediaSource]:
         items: list[BrowseMediaSource] = []
 
@@ -553,6 +553,5 @@ class SubsonicSource(MediaSource):
         )
 
 async def async_get_media_source(hass: HomeAssistant) -> SubsonicSource:
-    LOGGER.warning("async_get_media_source")
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     return SubsonicSource(hass, entry)

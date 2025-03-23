@@ -14,7 +14,7 @@ def getTagAttributes(xml: str, tag: str) -> dict:
 
     if len(itens) == 0:
         return {}
-    
+
     return itens[0]
 
 def getAttributes(xml: str) -> dict:

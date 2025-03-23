@@ -12,14 +12,14 @@ class SubsonicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def validate_input(self, config: dict) -> bool:
         userAgent = "HomeAssistant"
-        
+
         api = SubsonicApi(userAgent=userAgent, config=config)
         if not await api.ping():
             return False
         return True
 
     async def async_step_user(self, user_input=None, error=None):
-        
+
         schema = {
             vol.Required("url"): str,
             vol.Required("user"): str,
@@ -43,7 +43,7 @@ class SubsonicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "title": title
             }
 
-            options = { 
+            options = {
                 "artists": True,
                 "albums": True,
                 "playlists": True,
@@ -57,21 +57,21 @@ class SubsonicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_show_form(step_id="user", data_schema=vol.Schema(schema), errors={"base": "cannot_connect"})
 
         return self.async_show_form(step_id="user", data_schema=vol.Schema(schema))
-    
+
     @staticmethod
     @callback
     def async_get_options_flow(entry: ConfigEntry):
         return SubsonicOptionsFlow(entry)
-    
+
 class SubsonicOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, entry: ConfigEntry):
         self.entry = entry
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title=self.entry.title, 
+            return self.async_create_entry(title=self.entry.title,
                                             data=user_input)
-        
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -84,4 +84,4 @@ class SubsonicOptionsFlow(config_entries.OptionsFlow):
                 }
             ),
         )
-        
+
