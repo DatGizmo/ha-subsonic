@@ -248,15 +248,20 @@ class SubsonicApi:
         response = await self.__request("GET", "jukeboxControl", params)
         return getTagAttributes(response, "jukeboxStatus")
 
-    async def jukeboxControl(self, action: str, index: int = 0, offset: str = "", id: str = "", gain: float = 1) -> dict:
-        params = {
-            "action": action,
-            "index": index,
-            "offset": offset,
-            "id": id,
-            "gain": gain
-        }
-        response = await self.__request("POST", "jukeboxControl", params)
+    def _getQueryDict(self, d):
+        """
+        Given a dictionary, it cleans out all the values set to None
+        """
+        for k, v in list(d.items()):
+            if v is None:
+                del d[k]
+        return d
+
+    async def jukeboxControl(self, action: str, index=None, offset=None, id=None, gain=None) -> dict:
+
+        q = self._getQueryDict({'action': action, 'index': index, 'gain': gain, 'offset': offset, 'id': id})
+
+        response = await self.__request("POST", "jukeboxControl", q)
         return getTagAttributes(response, "jukeboxPlaylist")
 
     async def jukeboxLoadPlaylist(self, sids: list = []) -> None:

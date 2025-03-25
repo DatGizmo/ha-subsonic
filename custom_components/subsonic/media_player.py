@@ -12,6 +12,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     PLATFORM_SCHEMA,
+    BrowseMedia,
     MediaPlayerEnqueue,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -63,13 +64,13 @@ class SubsonicEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.SEEK |
         MediaPlayerEntityFeature.PREVIOUS_TRACK |
         MediaPlayerEntityFeature.NEXT_TRACK |
-        MediaPlayerEntityFeature.MEDIA_ENQUEUE |
         MediaPlayerEntityFeature.CLEAR_PLAYLIST |
-        MediaPlayerEntityFeature.REPEAT_SET |
         MediaPlayerEntityFeature.VOLUME_MUTE |
         MediaPlayerEntityFeature.VOLUME_SET |
         MediaPlayerEntityFeature.VOLUME_STEP |
-        MediaPlayerEntityFeature.SELECT_SOURCE
+        MediaPlayerEntityFeature.SELECT_SOURCE |
+        MediaPlayerEntityFeature.TURN_OFF |
+        MediaPlayerEntityFeature.TURN_ON
     )
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
@@ -103,23 +104,28 @@ class SubsonicEntity(MediaPlayerEntity):
     def index(self) -> int:
         if self._status:
             return int(self._status.get("currentIndex"))
-        return 0
+        return -1
 
     async def async_update(self) -> None:
-        self._status = await self.api.jukeboxStatus()
-        if(self._status):
-            self._playlist = await self.api.jukeboxPlaylist()
-            self._attr_media_position_updated_at = dt.utcnow()
-            self._attr_media_position = int(self._status.get("position"))
-            if(self._playlist):
-                self._currentSong = self._playlist[self.index]
-            await self._update_playlists()
+        try:
+            self._status = await self.api.jukeboxStatus()
+            if(self._status):
+                self._playlist = await self.api.jukeboxPlaylist()
+                self._attr_media_position_updated_at = dt.utcnow()
+                self._attr_media_position = int(self._status.get("position"))
+                if(self._playlist):
+                    self._currentSong = self._playlist[self.index]
+                await self._update_playlists()
+            else:
+                this._currentSong = None
+        except TimeoutError as error:
+            LOGGER.warning(f"TimeoutError: {error}")
 
     @property
     def state(self) -> MediaPlayerState:
         """Return the media state."""
         if not self._status or (self._status.get("playing") == 'false' and self.index == -1):
-            return MediaPlayerState.OFF
+            return MediaPlayerState.IDLE
         if self._status.get("playing") == 'false':
             return MediaPlayerState.PAUSED
         if self._status.get("playing") == 'true':
@@ -192,6 +198,7 @@ class SubsonicEntity(MediaPlayerEntity):
         await self.api.jukeboxControl("stop")
 
     async def async_media_stop(self) -> None:
+        await self.api.jukeboxControl("skip", index=self.index, offset=0)
         await self.api.jukeboxControl("stop")
 
     async def async_media_next_track(self) -> None:
@@ -212,7 +219,7 @@ class SubsonicEntity(MediaPlayerEntity):
         await self.api.jukeboxControl("skip", index=self.index, offset=int(position))
 
     @Throttle(PLAYLIST_UPDAET_INTERVAL)
-    async def _update_playlists(self) -> None:
+    async def _update_playlists(self, **kwargs: Any) -> None:
         self._attr_source_list = []
         self._all_playlists = await self.api.getPlaylists()
         for pl in self._all_playlists:
@@ -220,7 +227,6 @@ class SubsonicEntity(MediaPlayerEntity):
 
     async def async_select_source(self, source: str) -> None:
         await self.async_play_media(MediaType.PLAYLIST, source)
-
 
     async def async_play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
@@ -237,4 +243,36 @@ class SubsonicEntity(MediaPlayerEntity):
                     for s in songList.get("songs"):
                         songIds.append(s.get("id"))
                     await self.api.jukeboxControl("set", id=songIds)
+            await self.api.jukeboxControl("start")
 
+    async def async_turn_off(self) -> None:
+        """Service to send the MPD the command to stop playing."""
+        self._currentSong = None
+        await self.api.jukeboxControl('clear')
+        if(-1 != self.index):
+            await self.api.jukeboxControl('remove', index=0)
+            await self.async_update()
+
+    async def async_turn_on(self) -> None:
+        """Service to send the MPD the command to start playing."""
+        if(-1 < self.index):
+            await self.api.jukeboxControl('start', self.index)
+        elif(self._current_playlist):
+            await self.api.jukeboxControl('start', index=0)
+        self._attr_status = MediaPlayerState.IDLE
+        await self._update_playlists(no_throttle=True)
+
+    async def async_browse_media(
+        self,
+        media_content_type: MediaType | str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        LOGGER.warning(f"id: {media_content_id}")
+        LOGGER.warning(f"type: {media_content_type}")
+
+        # Call async_browse_media with the content filter
+        return await media_source.async_browse_media(
+            self.hass,
+            media_content_id,
+            content_filter=lambda item: item.media_content_id.startswith("media-source://subonic"),
+        )
